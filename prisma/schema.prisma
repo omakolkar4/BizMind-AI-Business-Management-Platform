@@ -1,0 +1,256 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String     @unique
+  password      String?
+  image         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  businesses    Business[]
+}
+
+model Business {
+  id              String             @id @default(cuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  idea            String
+  type            String             // e.g. "Food & Beverage", "Technology", "Retail", etc.
+  location        String
+  budget          Float              @default(0)
+  stage           String             @default("Idea") // Idea, Validation, Pre-launch, Early-stage, Growing, Established
+  goals           String             @default("") // JSON string or comma-separated
+  resources       String             @default("")
+  currency        String             @default("₹")
+  isDemo          Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  context         BusinessContext?
+  analysis        BusinessAnalysis?
+  businessPlan    BusinessPlan?
+  roadmapPhases   RoadmapPhase[]
+  employees       Employee[]
+  tasks           Task[]
+  transactions    Transaction[]
+  investments     Investment[]
+  recommendations AIRecommendation[]
+  notifications   Notification[]
+  reports         Report[]
+
+  @@index([userId])
+}
+
+model BusinessContext {
+  id               String   @id @default(cuid())
+  businessId       String   @unique
+  business         Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  targetCustomer   String?
+  pricingModel     String?
+  uniqueAdvantage  String?
+  channels         String?
+  competitorNotes  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model BusinessAnalysis {
+  id                   String   @id @default(cuid())
+  businessId           String   @unique
+  business             Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  overallScore         Int      @default(80)
+  summary              String
+  marketOpportunity    String
+  feasibility          String
+  targetAudience       String
+  marketTrends         String
+  competitorNotes      String
+  strengths            String   // JSON array of strings
+  weaknesses           String   // JSON array of strings
+  opportunities        String   // JSON array of strings
+  threats              String   // JSON array of strings
+  riskAssessment       String
+  revenueOpportunities String
+  costConsiderations   String
+  recommendedActions   String   // JSON array of strings
+  agentLogs            String   @default("[]") // JSON array of agent execution logs
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model BusinessPlan {
+  id                     String   @id @default(cuid())
+  businessId             String   @unique
+  business               Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  executiveSummary       String
+  businessOverview       String
+  problem                String
+  solution               String
+  targetMarket           String
+  customerPersona        String
+  marketAnalysis         String
+  competitorAnalysis     String
+  valueProposition       String
+  businessModel          String
+  marketingStrategy      String
+  operationsStrategy     String
+  technologyStrategy     String
+  financialOverview      String
+  riskAnalysis           String
+  growthStrategy         String
+  implementationRoadmap  String
+  isDraft                Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model RoadmapPhase {
+  id            String   @id @default(cuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  phaseNumber   Int
+  title         String
+  description   String
+  status        String   @default("Not Started") // Not Started, In Progress, Completed, Blocked
+  estimatedCost Float    @default(0)
+  tasks         String   @default("[]") // JSON string of phase milestones / tasks
+  startDate     String?
+  dueDate       String?
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model Employee {
+  id                String    @id @default(cuid())
+  businessId        String
+  business          Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name              String
+  email             String
+  phone             String?
+  role              String
+  department        String
+  salary            Float     @default(0)
+  joiningDate       DateTime  @default(now())
+  status            String    @default("Active") // Active, On Leave, Inactive
+  performanceRating Float     @default(4.5)
+  notes             String?
+  avatar            String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  tasks             Task[]
+
+  @@index([businessId])
+}
+
+model Task {
+  id                 String    @id @default(cuid())
+  businessId         String
+  business           Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  assignedEmployeeId String?
+  assignedEmployee   Employee? @relation(fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  priority           String    @default("Medium") // Low, Medium, High, Critical
+  status             String    @default("To Do")  // To Do, In Progress, Completed, Blocked
+  category           String    @default("General")
+  dueDate            DateTime?
+  order              Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([businessId])
+  @@index([assignedEmployeeId])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type        String   // "INCOME" or "EXPENSE"
+  category    String   // e.g. "Sales", "Operations", "Marketing", "Salaries", "Software", etc.
+  amount      Float
+  date        DateTime @default(now())
+  description String
+  invoiceRef  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([type])
+  @@index([date])
+}
+
+model Investment {
+  id               String   @id @default(cuid())
+  businessId       String
+  business         Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  investor         String
+  amount           Float
+  date             DateTime @default(now())
+  equityPercentage Float    @default(0)
+  type             String   @default("Angel") // Seed, Angel, VC, Grant, Bootstrapped, Founders
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model AIRecommendation {
+  id                String   @id @default(cuid())
+  businessId        String
+  business          Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type              String   // "Expense Alert", "Growth Opportunity", "Task Risk", "Financial Insight", etc.
+  priority          String   @default("Medium") // Low, Medium, High, Urgent
+  title             String
+  explanation       String
+  recommendedAction String
+  dismissed         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title      String
+  message    String
+  type       String   // "alert", "milestone", "task", "financial", "ai"
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title      String
+  type       String   // "Performance", "Financial", "Employee", "Tasks", "Analysis", "Plan"
+  summary    String
+  data       String   // JSON string of full report metrics and figures
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+}
