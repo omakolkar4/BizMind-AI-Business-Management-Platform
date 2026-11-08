@@ -132,32 +132,37 @@ export default function ReportsPage() {
       parsedData = {};
     }
 
-    const sections = [
-      {
-        title: "I. Executive Summary",
-        content: report.summary,
-      },
-      {
-        title: "II. Operational Telemetry Data",
-        content: `This audit reflects live transactions, task completions, and headcount metrics recorded for ${summary?.name || "NovaBite Foods"}. All indicators are calibrated with BizMind Multi-Agent Intelligence algorithms.`,
-      },
-      {
-        title: "III. Recommendations & Compliance Covenants",
-        content: `1. Rebalance supplier bulk contracts to maintain operating profit margin.\n2. Regularly clear blocked operational tasks to prevent kitchen and dispatch bottlenecks.\n3. Accelerate B2B corporate customer acquisition to increase ARR stability.`,
-      },
-    ];
+    const businessName = summary?.name || parsedData.businessName || "My Business";
+    const reportMetrics = parsedData.metrics || {};
+
+    const sections = parsedData.sections && Array.isArray(parsedData.sections) && parsedData.sections.length > 0
+      ? parsedData.sections
+      : [
+          {
+            title: "I. Executive Summary",
+            content: report.summary,
+          },
+          {
+            title: "II. Operational Telemetry Data",
+            content: `This management report reflects live transactions, task completions, and headcount metrics recorded for ${businessName}. All figures are derived directly from verified business records.`,
+          },
+          {
+            title: "III. Recommendations & Governance Notes",
+            content: "1. Monitor cash flow velocity and maintain disciplined tracking of operational expenses.\n2. Ensure tasks are linked to strategic roadmap phases to track milestones automatically.\n3. Align hiring plans with realistic monthly revenue benchmarks.",
+          },
+        ];
 
     exportDocumentToPdf({
       title: report.title,
-      businessName: summary?.name || "NovaBite Foods",
+      businessName,
       sections,
       metadata: {
         "Report ID": report.id.substring(0, 10),
-        "Audit Type": report.type,
-        "Total Revenue": formatCurrency(summary?.revenue || 845000),
-        "Total Expenses": formatCurrency(summary?.expenses || 425000),
-        "Net Operating Profit": formatCurrency(summary?.netProfit || 420000),
-        "Business Health Score": `${summary?.healthScore || 82}/100`,
+        "Report Type": report.type,
+        "Total Revenue": formatCurrency(reportMetrics.revenue ?? summary?.revenue ?? 0),
+        "Total Expenses": formatCurrency(reportMetrics.expenses ?? summary?.expenses ?? 0),
+        "Net Operating Profit": formatCurrency(reportMetrics.netProfit ?? summary?.netProfit ?? 0),
+        "Health Score": summary?.healthScore != null ? `${summary.healthScore}/100` : "Evaluation Pending",
       },
     });
 
@@ -165,7 +170,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <DashboardShell businessName={summary?.name || "NovaBite Foods"}>
+    <DashboardShell businessName={summary?.name || "My Business"}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -179,7 +184,7 @@ export default function ReportsPage() {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Generate certified business, financial, workforce, and strategic reports with investor-ready PDF downloads.
+              Generate structured business, financial, workforce, and strategic reports with investor-ready PDF downloads.
             </p>
           </div>
         </div>
@@ -217,7 +222,7 @@ export default function ReportsPage() {
                       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-8 shadow-xs"
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      <span>Generate Certified Report</span>
+                      <span>Generate Report</span>
                     </Button>
                   </CardContent>
                 </Card>
@@ -317,29 +322,55 @@ export default function ReportsPage() {
                 <DialogTitle>{viewingReport.title}</DialogTitle>
               </DialogHeader>
 
-              <div className="space-y-4 pt-2 text-xs">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <Badge variant="ai">{viewingReport.type}</Badge>
-                  <span className="text-muted-foreground font-mono">
-                    Compiled: {formatDate(viewingReport.createdAt)}
-                  </span>
-                </div>
+              {(() => {
+                let parsed: any = {};
+                try {
+                  parsed = JSON.parse(viewingReport.data);
+                } catch {
+                  parsed = {};
+                }
+                const metrics = parsed.metrics || {};
+                const sections = parsed.sections || [];
 
-                <div className="space-y-1">
-                  <strong className="text-foreground">Audit Overview:</strong>
-                  <p className="text-muted-foreground leading-relaxed">{viewingReport.summary}</p>
-                </div>
+                return (
+                  <div className="space-y-4 pt-2 text-xs">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <Badge variant="ai">{viewingReport.type}</Badge>
+                      <span className="text-muted-foreground font-mono">
+                        Compiled: {formatDate(viewingReport.createdAt)}
+                      </span>
+                    </div>
 
-                <div className="rounded-xl border bg-muted/20 p-4 space-y-2">
-                  <strong className="text-foreground">Executive Snapshot:</strong>
-                  <div className="grid grid-cols-2 gap-2 pt-1 font-mono">
-                    <div>Revenue: <strong>{formatCurrency(summary?.revenue || 845000)}</strong></div>
-                    <div>Expenses: <strong>{formatCurrency(summary?.expenses || 425000)}</strong></div>
-                    <div>Net Margin: <strong>{(summary?.profitMargin || 49.7).toFixed(1)}%</strong></div>
-                    <div>Health Score: <strong>{summary?.healthScore || 82}/100</strong></div>
+                    <div className="space-y-1">
+                      <strong className="text-foreground">Report Summary:</strong>
+                      <p className="text-muted-foreground leading-relaxed">{viewingReport.summary}</p>
+                    </div>
+
+                    <div className="rounded-xl border bg-muted/20 p-4 space-y-2">
+                      <strong className="text-foreground">Executive Snapshot:</strong>
+                      <div className="grid grid-cols-2 gap-2 pt-1 font-mono">
+                        <div>Revenue: <strong>{formatCurrency(metrics.revenue ?? summary?.revenue ?? 0)}</strong></div>
+                        <div>Expenses: <strong>{formatCurrency(metrics.expenses ?? summary?.expenses ?? 0)}</strong></div>
+                        <div>Net Margin: <strong>{((metrics.profitMargin ?? summary?.profitMargin) ?? 0).toFixed(1)}%</strong></div>
+                        <div>Health Score: <strong>{metrics.healthScore ?? summary?.healthScore ?? "Evaluation Pending"}</strong></div>
+                      </div>
+                    </div>
+
+                    {sections.length > 0 && (
+                      <div className="space-y-3 pt-2">
+                        {sections.map((sec: any, sIdx: number) => (
+                          <div key={sIdx} className="rounded-lg border bg-card p-3 space-y-1">
+                            <span className="font-bold text-foreground text-xs">{sec.title}</span>
+                            <p className="text-muted-foreground whitespace-pre-line leading-relaxed text-[11px]">
+                              {sec.content}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               <DialogFooter className="pt-4">
                 <Button variant="outline" size="sm" onClick={() => setViewingReport(null)}>

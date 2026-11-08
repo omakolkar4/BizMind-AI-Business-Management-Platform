@@ -12,8 +12,13 @@ import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { toast } from "sonner";
 
-export default function RegisterPage() {
+import { useSearchParams } from "next/navigation";
+
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite") || "";
+
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -42,7 +47,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, inviteToken: inviteToken || undefined }),
       });
 
       const data = await res.json();
@@ -51,9 +56,12 @@ export default function RegisterPage() {
         return;
       }
 
-      toast.success("Account created successfully! Welcome to BizMind.");
-      // Redirect to multi-step onboarding wizard
-      router.push("/onboarding");
+      toast.success(
+        inviteToken
+          ? "Welcome to the team! Your employee account is ready."
+          : "Account created successfully! Welcome to BizMind."
+      );
+      router.push(data.redirectTo || (inviteToken ? "/tasks" : "/onboarding"));
     } catch {
       toast.error("Network error during registration.");
     } finally {
@@ -70,10 +78,12 @@ export default function RegisterPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
         <Logo href="/" size="lg" className="justify-center" />
         <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
-          Create Your Founder Account
+          {inviteToken ? "Accept Team Invitation" : "Create Your Founder Account"}
         </h2>
         <p className="text-xs text-muted-foreground">
-          Start planning, launching, and managing your venture with AI co-pilot support.
+          {inviteToken
+            ? "Set your own secure credentials to access your assigned tasks and updates."
+            : "Start planning, launching, and managing your venture with AI co-pilot support."}
         </p>
       </div>
 
@@ -88,7 +98,7 @@ export default function RegisterPage() {
                   <Input
                     id="name"
                     type="text"
-                    placeholder="Aman Inamdar"
+                    placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="pl-9"
@@ -98,13 +108,13 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Work Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="founder@company.com"
+                    placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"
@@ -120,7 +130,7 @@ export default function RegisterPage() {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="At least 6 characters"
+                    placeholder="Minimum 6 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-9"
@@ -132,11 +142,11 @@ export default function RegisterPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="Re-enter password"
+                    placeholder="Re-enter your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-9"
@@ -145,17 +155,12 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                <span>Your data is encrypted and scoped strictly to your business workspace.</span>
-              </div>
-
               <Button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 shadow-md shadow-indigo-600/20"
               >
-                {loading ? "Creating Account..." : "Register & Start Onboarding"}
+                {loading ? "Creating Account..." : inviteToken ? "Join Team & Set Password" : "Create Account & Get Started"}
                 <ArrowRight className="h-4 w-4 ml-1.5" />
               </Button>
             </form>
@@ -172,3 +177,12 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+export default function RegisterPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <RegisterForm />
+    </React.Suspense>
+  );
+}
+

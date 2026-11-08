@@ -156,6 +156,50 @@ export async function ensureDemoData() {
           growthStrategy: "Scale Pune operations to 3 regional fulfillment hubs, followed by expansion into Navi Mumbai and Bengaluru tech hubs in Year 2.",
           implementationRoadmap: "Q1: Corporate pilot in Hinjewadi. Q2: Launch mobile subscription portal. Q3: Breakeven on second kitchen hub. Q4: B2B catering accreditation.",
           isDraft: false,
+          status: "ACCEPTED",
+          version: 1,
+          acceptedAt: new Date("2026-04-15"),
+          acceptedBy: "Demo Founder",
+          decision: "ACCEPT",
+          decisionTimestamp: new Date("2026-04-15"),
+        },
+      });
+
+      // Seed initial BusinessPlanVersion snapshot
+      await prisma.businessPlanVersion.create({
+        data: {
+          planId: (await prisma.businessPlan.findUnique({ where: { businessId: business.id } }))!.id,
+          businessId: business.id,
+          version: 1,
+          status: "ACCEPTED",
+          decision: "ACCEPT",
+          decisionTimestamp: new Date("2026-04-15"),
+          acceptedBy: "Demo Founder",
+          executiveSummary: "NovaBite Foods is an intelligent cloud-kitchen enterprise founded in Pune, Maharashtra, dedicated to solving the daily nutritional crisis faced by modern urban professionals.",
+          businessOverview: "Registered as a Private Limited entity with cloud facilities in Baner, Pune.",
+          problem: "Over 78% of urban professionals consume calorie-heavy, high-sodium restaurant meals or unhygienic street food during working hours.",
+          solution: "A curated daily subscription platform where users select calorie/macro profiles prepared fresh in certified hygienic kitchens.",
+          targetMarket: "Corporate employees, startup founders, fitness trainers across Pune IT corridors.",
+          customerPersona: "Kavita, 29, Lead Software Engineer at Hinjewadi MNC.",
+          marketAnalysis: "The Indian health food and meal delivery market is valued at $2.6B and projected to reach $8.1B by 2030.",
+          competitorAnalysis: "Traditional dabba services lack consistency and hygiene standards. NovaBite provides verified nutrition labels.",
+          valueProposition: "Chef-prepared, dietician-approved gourmet meals delivered hot before 1:00 PM.",
+          businessModel: "Direct recurring subscription plans and B2B bulk catering invoices.",
+          marketingStrategy: "Corporate sampling desks in high-density tech parks and fitness influencer partnerships.",
+          operationsStrategy: "Central production unit in Baner with hub-and-spoke delivery clusters.",
+          technologyStrategy: "Custom Next.js web application with progressive web app capabilities.",
+          financialOverview: "Initial 18-month target: Achieve ₹18L monthly recurring revenue with 24% EBITDA margin.",
+          riskAnalysis: "Operational disruptions handled through dual power generators and cold-storage buffer stock.",
+          growthStrategy: "Scale Pune operations to 3 regional fulfillment hubs.",
+          implementationRoadmap: "Q1: Corporate pilot in Hinjewadi. Q2: Launch mobile subscription portal.",
+        },
+      }).catch(() => null);
+
+      await prisma.business.update({
+        where: { id: business.id },
+        data: {
+          planApproved: true,
+          planStatus: "ACCEPTED",
         },
       });
     }

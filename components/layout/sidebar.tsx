@@ -18,6 +18,8 @@ import {
   Building2,
   ChevronRight,
   ShieldCheck,
+  Clock,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
@@ -26,6 +28,8 @@ import { Badge } from "@/components/ui/badge";
 interface SidebarProps {
   businessName?: string;
   businessStage?: string;
+  userRole?: string;
+  loading?: boolean;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
@@ -44,28 +48,33 @@ interface NavSection {
 }
 
 export function Sidebar({
-  businessName = "NovaBite Foods",
+  businessName = "My Business",
   businessStage = "Growing",
+  userRole = "OWNER",
+  loading = false,
   mobileOpen = false,
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  const isEmployee = userRole === "EMPLOYEE";
 
-  const navLinks: NavSection[] = [
+  const ownerNavLinks: NavSection[] = [
     {
       title: "Main",
       items: [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { label: "Idea & Budget Analyzer", href: "/analyzer", icon: Sparkles, badge: "New" },
         { label: "AI Business Analysis", href: "/analysis", icon: BrainCircuit, badge: "AI" },
         { label: "Business Plan", href: "/business-plan", icon: FileText },
         { label: "Roadmap", href: "/roadmap", icon: Milestone },
       ],
     },
     {
-      title: "Operations & Finance",
+      title: "Operations & Governance",
       items: [
         { label: "Finances & P&L", href: "/finances", icon: DollarSign },
         { label: "Employees", href: "/employees", icon: Users },
+        { label: "Attendance", href: "/attendance", icon: Clock },
         { label: "Task Manager", href: "/tasks", icon: CheckSquare },
       ],
     },
@@ -78,6 +87,27 @@ export function Sidebar({
       ],
     },
   ];
+
+  const employeeNavLinks: NavSection[] = [
+    {
+      title: "My Workspace",
+      items: [
+        { label: "My Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { label: "My Tasks", href: "/tasks", icon: CheckSquare, badge: "Assigned" },
+        { label: "Attendance", href: "/attendance", icon: Clock },
+        { label: "Work Assistant", href: "/assistant", icon: Sparkles, highlight: true },
+      ],
+    },
+    {
+      title: "Team & Communication",
+      items: [
+        { label: "Team Directory", href: "/team", icon: Users },
+        { label: "Settings", href: "/settings", icon: Settings },
+      ],
+    },
+  ];
+
+  const navLinks = isEmployee ? employeeNavLinks : ownerNavLinks;
 
   return (
     <>
@@ -137,7 +167,23 @@ export function Sidebar({
 
         {/* Navigation Sections */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-          {navLinks.map((section, idx) => (
+          {loading ? (
+            <div className="space-y-4 px-2 animate-pulse">
+              <div className="h-3 w-20 bg-muted/60 rounded" />
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-9 rounded-xl bg-muted/40" />
+                ))}
+              </div>
+              <div className="h-3 w-24 bg-muted/60 rounded pt-2" />
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-9 rounded-xl bg-muted/40" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            navLinks.map((section, idx) => (
             <div key={idx} className="space-y-1">
               <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
                 {section.title}
@@ -155,8 +201,8 @@ export function Sidebar({
                       className={cn(
                         "group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 select-none",
                         isActive
-                          ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30"
-                          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+                          ? "bg-indigo-50/90 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200 font-bold border border-indigo-200/70 dark:border-indigo-800/60 shadow-2xs"
+                          : "text-muted-foreground hover:bg-indigo-50/40 dark:hover:bg-indigo-950/30 hover:text-foreground",
                         item.highlight && !isActive && "text-indigo-600 dark:text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10"
                       )}
                     >
@@ -164,7 +210,7 @@ export function Sidebar({
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
-                            isActive ? "text-white" : item.highlight ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground group-hover:text-foreground"
+                            isActive ? "text-indigo-600 dark:text-indigo-300" : item.highlight ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground group-hover:text-foreground"
                           )}
                         />
                         <span>{item.label}</span>
@@ -172,10 +218,10 @@ export function Sidebar({
 
                       {item.badge && (
                         <Badge
-                          variant={isActive ? "secondary" : "ai"}
+                          variant={isActive ? "default" : "ai"}
                           className={cn(
                             "text-[10px] px-1.5 py-0 h-4 font-bold uppercase",
-                            isActive ? "bg-white/20 text-white border-transparent" : ""
+                            isActive ? "bg-indigo-600 text-white border-transparent" : ""
                           )}
                         >
                           {item.badge}
@@ -186,25 +232,35 @@ export function Sidebar({
                 })}
               </div>
             </div>
-          ))}
+          ))
+        )}
         </div>
 
-        {/* Co-Pilot Status Bottom Badge */}
+        {/* Workspace Role Status Bottom Badge */}
         <div className="p-3 border-t bg-muted/20">
           <div className="rounded-xl border bg-card p-3 shadow-2xs">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-xs font-bold text-foreground">AI Co-Pilot Active</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-2 rounded-full ${isEmployee ? "bg-indigo-500" : "bg-emerald-500"}`} />
+                <span className="text-xs font-bold text-foreground">
+                  {isEmployee ? "Employee Workspace" : "Founder Workspace"}
+                </span>
+              </div>
+              <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 h-4">
+                {isEmployee ? "TEAM" : "OWNER"}
+              </Badge>
             </div>
             <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-              Continuous multi-agent monitoring for financials and operational risks.
+              {isEmployee
+                ? "Restricted workspace: assigned deliverables, team directory & requests."
+                : "Continuous strategic guidance, financial governance & operational telemetry."}
             </p>
             <div className="flex items-center justify-between mt-2 pt-2 border-t text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                Deterministic/LLM
+                RBAC Enforced
               </span>
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400">v1.2</span>
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">BizMind 3.0</span>
             </div>
           </div>
         </div>

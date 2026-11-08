@@ -71,8 +71,8 @@ Return JSON with exactly these 17 keys containing detailed, highly realistic bus
   }
 
   // Realistic Context-Aware Deterministic Generator
-  const name = context.businessName;
-  const loc = context.location;
+  const name = context.businessName?.trim() || "The venture";
+  const loc = context.location || "Local Market";
   const type = context.businessType;
   const budgetStr = `₹${(context.budget || 1500000).toLocaleString("en-IN")}`;
 

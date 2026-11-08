@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
-import { getActiveBusinessId } from "@/lib/auth";
+import { getActiveBusinessId, getCurrentUser } from "@/lib/auth";
 
 export async function GET(
   req: Request,
@@ -39,6 +39,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "OWNER") {
+      return NextResponse.json({ error: "Forbidden: Only business owners can edit employees." }, { status: 403 });
+    }
+
     const businessId = await getActiveBusinessId();
     if (!businessId) {
       return NextResponse.json({ error: "No active business" }, { status: 404 });
@@ -47,8 +52,16 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const updated = await prisma.employee.updateMany({
+    const existingEmp = await prisma.employee.findFirst({
       where: { id, businessId },
+    });
+
+    if (!existingEmp) {
+      return NextResponse.json({ error: "Employee not found." }, { status: 404 });
+    }
+
+    const updated = await prisma.employee.update({
+      where: { id },
       data: {
         ...(body.name && { name: body.name }),
         ...(body.email && { email: body.email }),
@@ -62,7 +75,12 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ success: true, count: updated.count });
+    // If status changed to Inactive and employee has a linked User account
+    if (body.status && existingEmp.userId) {
+      // Inactive status prevents login in lib/auth and login route
+    }
+
+    return NextResponse.json({ success: true, employee: updated });
   } catch (error: any) {
     console.error("PATCH /api/employees/[id] error:", error);
     return NextResponse.json({ error: error?.message || "Internal error" }, { status: 500 });
@@ -74,6 +92,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "OWNER") {
+      return NextResponse.json({ error: "Forbidden: Only business owners can remove employees." }, { status: 403 });
+    }
+
     const businessId = await getActiveBusinessId();
     if (!businessId) {
       return NextResponse.json({ error: "No active business" }, { status: 404 });
@@ -81,11 +104,33 @@ export async function DELETE(
 
     const { id } = await params;
 
-    await prisma.employee.deleteMany({
+    const emp = await prisma.employee.findFirst({
       where: { id, businessId },
     });
 
-    return NextResponse.json({ success: true });
+    if (!emp) {
+      return NextResponse.json({ error: "Employee not found." }, { status: 404 });
+    }
+
+    // Unassign tasks without deleting task history
+    await prisma.task.updateMany({
+      where: { assignedEmployeeId: id },
+      data: { assignedEmployeeId: null },
+    });
+
+    // Remove user account if linked
+    if (emp.userId) {
+      await prisma.user.delete({
+        where: { id: emp.userId },
+      }).catch(() => {});
+    }
+
+    // Delete employee record
+    await prisma.employee.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: "Employee removed and tasks safely preserved." });
   } catch (error: any) {
     console.error("DELETE /api/employees/[id] error:", error);
     return NextResponse.json({ error: error?.message || "Internal error" }, { status: 500 });

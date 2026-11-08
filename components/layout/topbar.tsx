@@ -27,39 +27,28 @@ interface TopbarProps {
 }
 
 export function Topbar({
-  userName = "Demo Founder",
-  userEmail = "demo@bizmind.ai",
+  userName = "Founder",
+  userEmail = "",
   onMobileToggle,
-  businessName = "NovaBite Foods",
+  businessName = "My Business",
 }: TopbarProps) {
   const router = useRouter();
   const [commandOpen, setCommandOpen] = React.useState(false);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
 
-  const handleLoadDemo = async () => {
-    try {
-      setIsResetting(true);
-      const res = await fetch("/api/auth/demo", { method: "POST" });
-      if (res.ok) {
-        toast.success("Demo business 'NovaBite Foods' loaded successfully!");
-        router.refresh();
-      } else {
-        toast.error("Failed to reset demo data.");
-      }
-    } catch (err) {
-      toast.error("Network error while loading demo.");
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
   const handleLogout = async () => {
     try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("bizmind_user_role");
+      }
       await fetch("/api/auth/logout", { method: "POST" });
       toast.success("Logged out successfully");
       router.push("/login");
     } catch {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("bizmind_user_role");
+      }
       router.push("/login");
     }
   };
@@ -93,27 +82,15 @@ export function Topbar({
 
         {/* Right Section: Actions, AI Status, Notifications, Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quick Load Demo Business Button (Section 28) */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLoadDemo}
-            disabled={isResetting}
-            className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold h-8 rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isResetting ? "animate-spin" : ""}`} />
-            <span>Load Demo Business</span>
-          </Button>
-
           {/* AI Mode Indicator */}
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-card text-[11px] font-medium text-muted-foreground">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
             </span>
-            <span className="text-foreground font-semibold">AI Agent</span>
+            <span className="text-foreground font-semibold">AI Mentor</span>
             <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">
-              Demo Active
+              Online
             </span>
           </div>
 

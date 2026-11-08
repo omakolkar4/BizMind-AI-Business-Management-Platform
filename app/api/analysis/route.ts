@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
-import { getActiveBusinessId } from "@/lib/auth";
+import { getCurrentUser, getActiveBusinessId } from "@/lib/auth";
 import { runAIOrchestrator } from "@/lib/ai/orchestrator";
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (user.role === "EMPLOYEE") {
+      return NextResponse.json(
+        { error: "Forbidden: Employees cannot access strategic business analysis." },
+        { status: 403 }
+      );
+    }
+
     const businessId = await getActiveBusinessId();
     if (!businessId) {
       return NextResponse.json({ error: "No active business" }, { status: 404 });
@@ -35,6 +46,17 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (user.role === "EMPLOYEE") {
+      return NextResponse.json(
+        { error: "Forbidden: Employees cannot run AI feasibility analysis." },
+        { status: 403 }
+      );
+    }
+
     const businessId = await getActiveBusinessId();
     if (!businessId) {
       return NextResponse.json({ error: "No active business" }, { status: 404 });

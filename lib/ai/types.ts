@@ -73,9 +73,67 @@ export interface AdvisorContextData {
   businessPlanSnippet?: string;
 }
 
+export interface ActionableStartupGuidance {
+  what: string;
+  why: string;
+  how: string;
+  resourcesNeeded: string[];
+  estimatedCost: number | string;
+  timeline: string;
+  measurableResult: string;
+  risksAndMitigation: string;
+  nextStepAfter: string;
+  actionUrl?: string;
+  actionLabel?: string;
+}
+
+export interface FeasibilityAssessmentResult {
+  overallStatus: "VIABLE" | "MODERATE_RISK" | "HIGH_RISK" | "NEEDS_VALIDATION" | "CAPITAL_CONSTRAINED";
+  summary: string;
+  customerDemandAnalysis: string;
+  targetCustomerFit: string;
+  marketAndCompetition: string;
+  capitalViability: string;
+  minStartupCost: number;
+  maxStartupCost: number;
+  expectedMonthlyOpex: number;
+  breakEvenMonths: number;
+  operationalComplexity: "Low" | "Moderate" | "High" | "Very High";
+  founderReadiness: string;
+  legalRegulatoryRisks: string;
+  strengths: string[];
+  weaknesses: string[];
+  criticalRisks: string[];
+  majorAssumptions: string[];
+  unansweredQuestions: string[];
+  validationExperiments: Array<{
+    title: string;
+    objective: string;
+    budgetLimit: number;
+    metricsToTrack: string;
+    reviewTimeline: string;
+  }>;
+  nextStepRecommendation: {
+    title: string;
+    description: string;
+    guidance: ActionableStartupGuidance;
+  };
+}
+
 export interface AdvisorResponse {
   answer: string;
   contextUsed: string[];
   priorityActions: string[];
   sentiment: "positive" | "warning" | "neutral" | "urgent";
+  actionableGuidance?: ActionableStartupGuidance[];
+  actionPrompt?: {
+    actionType: "CREATE_TASK" | "UPDATE_ROADMAP" | "REVIEW_BUDGET";
+    title: string;
+    description: string;
+    category?: string;
+    priority?: string;
+    suggestedBudget?: number;
+    successMetric?: string;
+  };
 }
+

@@ -1,12 +1,31 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
-import { getActiveBusinessId } from "@/lib/auth";
+import { getCurrentUser, getActiveBusinessId } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (user.role === "EMPLOYEE") {
+      return NextResponse.json(
+        { error: "Forbidden: Employees cannot view equity and investment records." },
+        { status: 403 }
+      );
+    }
+
     const businessId = await getActiveBusinessId();
     if (!businessId) {
       return NextResponse.json({ error: "No active business" }, { status: 404 });
+    }
+
+    const business = await prisma.business.findFirst({
+      where: { id: businessId, userId: user.id },
+    });
+    if (!business) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const investments = await prisma.investment.findMany({
@@ -23,9 +42,28 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (user.role === "EMPLOYEE") {
+      return NextResponse.json(
+        { error: "Forbidden: Employees cannot record investments." },
+        { status: 403 }
+      );
+    }
+
     const businessId = await getActiveBusinessId();
     if (!businessId) {
       return NextResponse.json({ error: "No active business" }, { status: 404 });
+    }
+
+    const business = await prisma.business.findFirst({
+      where: { id: businessId, userId: user.id },
+    });
+    if (!business) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const body = await req.json();

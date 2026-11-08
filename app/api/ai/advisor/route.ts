@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
-import { getActiveBusinessId } from "@/lib/auth";
+import { getCurrentUser, getActiveBusinessId } from "@/lib/auth";
 import { askBusinessAdvisor } from "@/lib/ai/advisor";
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (user.role === "EMPLOYEE") {
+      return NextResponse.json(
+        { error: "Forbidden: AI Advisor is an owner-only strategic advisory tool." },
+        { status: 403 }
+      );
+    }
+
     const businessId = await getActiveBusinessId();
     if (!businessId) {
       return NextResponse.json({ error: "No active business" }, { status: 404 });

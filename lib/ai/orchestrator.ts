@@ -69,7 +69,7 @@ export async function runAIOrchestrator(
 
   return {
     overallScore,
-    summary: `${context.businessName} showcases strong commercial viability with an overall AI Business Health Score of ${overallScore}/100. The concept aligns directly with high-growth customer trends in ${context.location}. With disciplined capital expenditure and execution of unit-level profitability, the business is well-positioned for sustainable scale.`,
+    summary: `${context.businessName || "The proposed venture"} showcases strong commercial viability with an overall AI Business Health Score of ${overallScore}/100. The concept aligns directly with high-growth customer trends in ${context.location}. With disciplined capital expenditure and execution of unit-level profitability, the business is well-positioned for sustainable scale.`,
     marketOpportunity: marketResult.summary,
     feasibility: `Highly feasible. Capital requirement of ₹${(context.budget || 1000000).toLocaleString("en-IN")} provides adequate operational buffer. Strategic and operational assessments indicate low to moderate barriers for initial customer onboarding.`,
     targetAudience: context.targetCustomer || `Urban consumers, professionals, and forward-thinking businesses in ${context.location}.`,

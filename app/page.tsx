@@ -29,61 +29,42 @@ import { RevenueExpenseChart } from "@/components/charts/revenue-expense-chart";
 import { toast } from "sonner";
 
 export default function LandingPage() {
-  const router = useRouter();
-  const [loadingDemo, setLoadingDemo] = React.useState(false);
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
 
-  const handleExploreDemo = async () => {
-    try {
-      setLoadingDemo(true);
-      const res = await fetch("/api/auth/demo", { method: "POST" });
-      if (res.ok) {
-        toast.success("Loaded demo workspace: NovaBite Foods!");
-        router.push("/dashboard");
-      } else {
-        router.push("/dashboard");
-      }
-    } catch {
-      router.push("/dashboard");
-    } finally {
-      setLoadingDemo(false);
-    }
-  };
-
   const workflowSteps = [
-    { num: "01", title: "Idea Conception", desc: "Input your business concept, target demographic, and initial budget." },
-    { num: "02", title: "Multi-Agent AI Analysis", desc: "Specialized agents evaluate market size, risks, unit economics, and operations." },
-    { num: "03", title: "17-Section Business Plan", desc: "AI formulates a bank-ready, investor-grade comprehensive business roadmap." },
-    { num: "04", title: "Milestone Roadmap", desc: "Structured timeline from validation to multi-city market expansion." },
-    { num: "05", title: "Continuous Execution", desc: "Track cash flows, delegate tasks on Kanban, and lead your workforce." },
-    { num: "06", title: "AI Co-Pilot Decision Support", desc: "Get proactive expense alerts, growth recommendations, and instant strategic advice." },
+    { num: "01", title: "Idea & Feasibility", desc: "Input your business concept, target market, and starting budget for instant feasibility diagnosis." },
+    { num: "02", title: "Personalized Roadmap", desc: "Generate a dynamic milestone roadmap with verifiable criteria connected to real records." },
+    { num: "03", title: "Strategic Business Plan", desc: "Formulate a comprehensive, bank-ready 17-section business plan that updates as you grow." },
+    { num: "04", title: "Execution & Workspaces", desc: "Assign Kanban tasks, onboard employees, and streamline manager reviews with role-based access." },
+    { num: "05", title: "Finance & Loss Prevention", desc: "Track verified cash flows, margins, runway, and receive proactive corrective action plans." },
+    { num: "06", title: "AI Startup Mentor", desc: "Get continuous strategic co-pilot answers, risk warnings, and turn recommendations into real tasks." },
   ];
 
   const agentCards = [
-    { title: "Market Agent", role: "TAM & Trend Sizing", score: "84/100", desc: "Scans demographic patterns, competitive density, and customer willingness-to-pay." },
-    { title: "Finance Agent", role: "Unit Economics & Runway", score: "86/100", desc: "Calculates gross margins, monthly burn, cash buffer safety, and breakeven horizons." },
-    { title: "Strategy Agent", role: "Competitive Moat", score: "87/100", desc: "Designs initial wedge distribution, pricing power, and customer retention flywheels." },
-    { title: "Risk Agent", role: "Mitigation & Audits", score: "80/100", desc: "Surfaces regulatory compliance hurdles, supplier dependencies, and margin shocks." },
-    { title: "Operations Agent", role: "Throughput & SLAs", score: "85/100", desc: "Models fulfillment bottlenecks, labor allocation, and equipment capacity." },
-    { title: "AI Orchestrator", role: "Executive Synthesis", score: "82/100", desc: "Harmonizes all agent findings into unified actionable priorities for the founder." },
+    { title: "Market Feasibility", role: "Demand & Competition", desc: "Scans demographic patterns, competitive density, and customer willingness-to-pay." },
+    { title: "Finance & Runway", role: "Loss Prevention & Margins", desc: "Calculates gross margins, monthly burn, cash buffer safety, and breakeven horizons." },
+    { title: "Strategy Architect", role: "Competitive Positioning", desc: "Designs initial wedge distribution, pricing power, and customer retention flywheels." },
+    { title: "Risk & Compliance", role: "Mitigation & Audits", desc: "Surfaces regulatory hurdles, capital constraints, and operating bottlenecks." },
+    { title: "Operations Lead", role: "Execution & Workload", desc: "Monitors milestone completion, task flow, employee workload, and blocked items." },
+    { title: "AI Startup Mentor", role: "Executive Co-Pilot", desc: "Harmonizes real business state into prioritized actionable next steps for the founder." },
   ];
 
   const faqs = [
     {
       q: "What makes BizMind different from generic AI chatbots?",
-      a: "BizMind does not merely generate static text. It links multi-agent AI business analysis directly to real operational execution — including live transaction tracking, P&L calculations, Kanban task delegation, employee management, and continuous proactive decision alerts based on your real data.",
+      a: "BizMind does not merely generate static text or generic advice. It links AI mentorship directly to real operational execution — including live transaction ledgers, P&L calculations, deterministic roadmap requirements, Kanban tasks, employee workspaces, and proactive decision alerts.",
     },
     {
-      q: "Does BizMind require an OpenAI API key to work?",
-      a: "No! BizMind includes a sophisticated, deterministic Demo Mode with realistic multi-agent simulations and preloaded venture datasets (NovaBite Foods). You can also configure an OpenAI-compatible API key via .env anytime for live LLM completions.",
+      q: "Can I use BizMind with a limited starting budget?",
+      a: "Yes! BizMind is specifically designed for aspiring founders and small business owners with limited starting capital. Its feasibility engine assesses whether your idea is practical within your budget and recommends low-cost validation experiments before you commit significant funds.",
     },
     {
       q: "Can I export my generated business plan or reports to PDF?",
-      a: "Yes. Every business plan, financial summary, and multi-agent SWOT analysis can be exported as a beautifully formatted, investor-grade PDF with customized headers, metrics tables, and execution checklists.",
+      a: "Yes. Every business plan, executive summary, and financial diagnostic report can be exported as a beautifully formatted, investor-ready PDF with structured tables and execution milestones.",
     },
     {
-      q: "Is BizMind suitable for existing businesses or only early-stage startups?",
-      a: "BizMind supports both! You can start from a raw idea in the Onboarding Wizard, or bring an existing operational business to manage ongoing cash flow, track team productivity, and receive automated financial diagnosis.",
+      q: "How do Employee and Owner workspaces work?",
+      a: "BizMind provides separate, role-based experiences. Owners manage strategy, private finances, employee approvals, and roadmap milestones. Employees receive access to assigned tasks, notifications, blocker reporting, and work submission tools without accessing confidential company financials.",
     },
   ];
 
@@ -96,10 +77,10 @@ export default function LandingPage() {
 
           <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-muted-foreground">
             <a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
-            <a href="#ai-agents" className="hover:text-foreground transition-colors">AI Agents</a>
+            <a href="#capabilities" className="hover:text-foreground transition-colors">Capabilities</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#dashboard-preview" className="hover:text-foreground transition-colors">Dashboard</a>
-            <Link href="/about" className="hover:text-foreground transition-colors">About Project</Link>
+            <a href="#dashboard-preview" className="hover:text-foreground transition-colors">Preview</a>
+            <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -109,15 +90,15 @@ export default function LandingPage() {
                 Sign In
               </Button>
             </Link>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleExploreDemo}
-              disabled={loadingDemo}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-indigo-600/20"
-            >
-              {loadingDemo ? "Launching..." : "Explore Demo"}
-            </Button>
+            <Link href="/register">
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-indigo-600/20"
+              >
+                Get Started
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -130,52 +111,51 @@ export default function LandingPage() {
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-indigo-200 dark:border-indigo-900 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold shadow-xs">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Introducing BizMind 2.0 — Multi-Agent Business Co-Pilot</span>
+            <span>BizMind 3.0 — AI Startup Mentor & Business Growth Execution Platform</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground max-w-4xl mx-auto leading-[1.12]">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground max-w-4xl mx-auto leading-[1.14]">
             Turn Your Business Idea Into a{" "}
             <span className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent">
-              Smarter Business.
+              Practical Plan.
             </span>
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            BizMind combines AI-powered planning, financial management, team management, and decision support in one intelligent business workspace.
+            Turn your business idea into a practical plan, get AI-powered guidance and track every step towards growth.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link href="/onboarding">
+            <Link href="/register">
               <Button size="lg" className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-600/25 px-8">
-                <span>Start Building</span>
+                <span>Get Started</span>
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={handleExploreDemo}
-              disabled={loadingDemo}
-              className="w-full sm:w-auto font-semibold border-border hover:bg-muted/80 px-8"
-            >
-              <Play className="h-4 w-4 mr-2 fill-current" />
-              <span>Explore Live Demo Business</span>
-            </Button>
+            <Link href="/login">
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto font-semibold border-border hover:bg-muted/80 px-8"
+              >
+                <span>Sign In</span>
+              </Button>
+            </Link>
           </div>
 
           <div className="pt-4 flex items-center justify-center gap-6 text-xs text-muted-foreground font-medium">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> No credit card required
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Free to get started
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Instant demo mode ready
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Feasibility & Risk Analysis
             </span>
             <span className="flex items-center gap-1.5 hidden sm:flex">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Multi-Agent AI architecture
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Continuous Execution Co-Pilot
             </span>
           </div>
 
-          {/* 7 & 40. Realistic Dashboard Preview (Section 40 Requirements) */}
+          {/* Illustrative Dashboard Preview */}
           <div id="dashboard-preview" className="pt-10 max-w-5xl mx-auto">
             <div className="relative rounded-2xl border bg-card p-3 sm:p-5 shadow-2xl overflow-hidden text-left">
               {/* Top Window Bar */}
@@ -185,11 +165,11 @@ export default function LandingPage() {
                   <div className="h-3 w-3 rounded-full bg-amber-500" />
                   <div className="h-3 w-3 rounded-full bg-emerald-500" />
                   <span className="ml-2 text-xs font-semibold text-muted-foreground">
-                    NovaBite Foods — BizMind Executive Workspace
+                    Illustrative Product Preview — Sample Enterprise Workspace
                   </span>
                 </div>
-                <Badge variant="success" className="text-[11px] font-bold">
-                  Business Health: 82%
+                <Badge variant="outline" className="text-[11px] font-semibold border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">
+                  Illustrative Sample Data
                 </Badge>
               </div>
 
@@ -241,13 +221,14 @@ export default function LandingPage() {
                     </p>
                   </div>
                   <div className="pt-4 border-t border-indigo-200/50 dark:border-indigo-900/50 mt-4">
-                    <Button
-                      size="sm"
-                      onClick={handleExploreDemo}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs"
-                    >
-                      Open Interactive Workspace
-                    </Button>
+                    <Link href="/register">
+                      <Button
+                        size="sm"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs"
+                      >
+                        Start Your Free Account
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -322,7 +303,7 @@ export default function LandingPage() {
                     <span className="font-bold text-foreground">{agent.title}</span>
                   </div>
                   <Badge variant="outline" className="text-xs font-mono font-bold">
-                    {agent.score}
+                    Active
                   </Badge>
                 </div>
                 <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
@@ -453,20 +434,20 @@ export default function LandingPage() {
             Ready to Build a Smarter, More Profitable Business?
           </h2>
           <p className="text-indigo-200 text-sm sm:text-base max-w-xl mx-auto">
-            Experience the complete platform today. Explore the NovaBite Foods live demo business or launch your own venture in minutes.
+            Turn your business idea into a practical plan, get AI-powered guidance and track every step towards growth.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Button
-              size="lg"
-              onClick={handleExploreDemo}
-              disabled={loadingDemo}
-              className="bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-8 shadow-xl"
-            >
-              Explore Live Demo Now
-            </Button>
-            <Link href="/onboarding">
+            <Link href="/register">
+              <Button
+                size="lg"
+                className="bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-8 shadow-xl"
+              >
+                Get Started Free
+              </Button>
+            </Link>
+            <Link href="/login">
               <Button size="lg" variant="outline" className="border-indigo-400/50 text-white hover:bg-white/10 font-semibold px-8">
-                Create New Business
+                Sign In
               </Button>
             </Link>
           </div>

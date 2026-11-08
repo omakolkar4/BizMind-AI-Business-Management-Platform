@@ -11,14 +11,19 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  name          String?
-  email         String     @unique
-  password      String?
-  image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  businesses    Business[]
+  id               String     @id @default(cuid())
+  name             String?
+  username         String?    @unique
+  email            String     @unique
+  password         String?
+  image            String?
+  role             String     @default("OWNER") // "OWNER" or "EMPLOYEE"
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  businesses       Business[]
+  employee         Employee?  @relation("EmployeeUser")
+  sentMessages     Message[]  @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
 }
 
 model Business {
@@ -31,24 +36,38 @@ model Business {
   location        String
   budget          Float              @default(0)
   stage           String             @default("Idea") // Idea, Validation, Pre-launch, Early-stage, Growing, Established
-  goals           String             @default("") // JSON string or comma-separated
-  resources       String             @default("")
-  currency        String             @default("₹")
-  isDemo          Boolean            @default(false)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  goals             String             @default("") // JSON string or comma-separated
+  resources         String             @default("")
+  targetCustomer    String?
+  productsServices  String?
+  targetTimeline    String?
+  constraints       String?
+  currency          String             @default("₹")
+  isDemo            Boolean            @default(false)
+  planStatus        String             @default("GENERATED") // DRAFT, GENERATED, UNDER_REVIEW, REVISION_REQUIRED, ACCEPTED
+  planApproved      Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  context         BusinessContext?
-  analysis        BusinessAnalysis?
-  businessPlan    BusinessPlan?
-  roadmapPhases   RoadmapPhase[]
-  employees       Employee[]
-  tasks           Task[]
-  transactions    Transaction[]
-  investments     Investment[]
-  recommendations AIRecommendation[]
-  notifications   Notification[]
-  reports         Report[]
+  context          BusinessContext?
+  analysis         BusinessAnalysis?
+  feasibility      FeasibilityAssessment?
+  businessPlan     BusinessPlan?
+  roadmapPhases    RoadmapPhase[]
+  employees        Employee[]
+  tasks            Task[]
+  transactions     Transaction[]
+  investments      Investment[]
+  recommendations  AIRecommendation[]
+  notifications    Notification[]
+  reports          Report[]
+  employeeRequests EmployeeRequest[]
+  attendances      Attendance[]
+  messages         Message[]
+  officeQrCodes    OfficeQrCode[]
+  workSchedules    WorkSchedule[]
+  attendanceAudits AttendanceAudit[]
+  ideaAssessments  IdeaAssessment[]
 
   @@index([userId])
 }
@@ -112,69 +131,202 @@ model BusinessPlan {
   growthStrategy         String
   implementationRoadmap  String
   isDraft                Boolean  @default(false)
+  status                 String   @default("GENERATED") // DRAFT, GENERATED, UNDER_REVIEW, REVISION_REQUIRED, ACCEPTED
+  version                Int      @default(1)
+  acceptedAt             DateTime?
+  acceptedBy             String?
+  decision               String?  // "ACCEPT", "REVISE"
+  decisionTimestamp      DateTime?
+  revisionNotes          String?
+  reviewRequestedAt      DateTime?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+  versions               BusinessPlanVersion[]
+}
+
+model BusinessPlanVersion {
+  id                     String   @id @default(cuid())
+  planId                 String
+  plan                   BusinessPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  businessId             String
+  version                Int
+  status                 String   // "ACCEPTED", "REVISION_REQUIRED", "SNAPSHOT"
+  decision               String?  // "ACCEPT", "REVISE"
+  decisionTimestamp      DateTime @default(now())
+  acceptedBy             String?
+  revisionNotes          String?
+  executiveSummary       String
+  businessOverview       String
+  problem                String
+  solution               String
+  targetMarket           String
+  customerPersona        String
+  marketAnalysis         String
+  competitorAnalysis     String
+  valueProposition       String
+  businessModel          String
+  marketingStrategy      String
+  operationsStrategy     String
+  technologyStrategy     String
+  financialOverview      String
+  riskAnalysis           String
+  growthStrategy         String
+  implementationRoadmap  String
+  createdAt              DateTime @default(now())
+
+  @@index([businessId])
+  @@index([planId])
+}
+
+model IdeaAssessment {
+  id                   String   @id @default(cuid())
+  businessId           String
+  business             Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  rawIdea              String
+  businessCategory     String
+  operatingModel       String?
+  targetLocation       String?
+  staffingPlan         String?
+  statedBudget         Float?
+  isBudgetUnknown      Boolean  @default(false)
+  existingResources    String?
+  timeframeGoal        String?
+  assessmentJson       String   // JSON string of full structured 14-point assessment
+  status               String   @default("PROVISIONAL") // PROVISIONAL, CONFIRMED, APPLIED
+  appliedAt            DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([businessId])
 }
 
 model RoadmapPhase {
-  id            String   @id @default(cuid())
-  businessId    String
-  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  phaseNumber   Int
-  title         String
-  description   String
-  status        String   @default("Not Started") // Not Started, In Progress, Completed, Blocked
-  estimatedCost Float    @default(0)
-  tasks         String   @default("[]") // JSON string of phase milestones / tasks
-  startDate     String?
-  dueDate       String?
-  order         Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  businessId          String
+  business            Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  phaseNumber         Int
+  title               String
+  description         String
+  objective           String?
+  rationale           String?
+  expectedOutcome     String?
+  duration            String?
+  dependencies        String   @default("[]") // JSON array of dependency phase numbers or titles
+  priority            String   @default("Medium") // Low, Medium, High, Critical
+  riskLevel           String   @default("Low") // Low, Medium, High
+  requiredResources   String   @default("[]") // JSON array of required resources/roles
+  deliverables        String   @default("[]") // JSON array of deliverables
+  completionCriteria  String?
+  requirements        String   @default("[]") // JSON array of structured PhaseRequirements linked to modules
+  status              String   @default("Not Started") // Not Started, In Progress, Completed, Blocked
+  estimatedCost       Float    @default(0)
+  tasks               String   @default("[]") // JSON string of phase milestones / tasks
+  startDate           String?
+  dueDate             String?
+  order               Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([businessId])
 }
 
 model Employee {
-  id                String    @id @default(cuid())
+  id                String            @id @default(cuid())
   businessId        String
-  business          Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId            String?           @unique
+  user              User?             @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
   name              String
+  username          String?           @unique
   email             String
   phone             String?
   role              String
   department        String
-  salary            Float     @default(0)
-  joiningDate       DateTime  @default(now())
-  status            String    @default("Active") // Active, On Leave, Inactive
-  performanceRating Float     @default(4.5)
+  salary            Float             @default(0)
+  joiningDate       DateTime          @default(now())
+  status            String            @default("Active") // Active, On Leave, Inactive
+  performanceRating Float             @default(4.5)
   notes             String?
   avatar            String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  inviteToken       String?           @unique
+  inviteStatus      String            @default("ACTIVE") // "INVITED", "ACTIVE", "INACTIVE"
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   tasks             Task[]
+  requests          EmployeeRequest[]
+  attendances       Attendance[]
+  workSchedule      WorkSchedule?
+  attendanceAudits  AttendanceAudit[]
 
   @@index([businessId])
 }
 
 model Task {
-  id                 String    @id @default(cuid())
+  id                 String        @id @default(cuid())
   businessId         String
-  business           Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business           Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   title              String
   description        String?
   assignedEmployeeId String?
-  assignedEmployee   Employee? @relation(fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
-  priority           String    @default("Medium") // Low, Medium, High, Critical
-  status             String    @default("To Do")  // To Do, In Progress, Completed, Blocked
-  category           String    @default("General")
+  assignedEmployee   Employee?     @relation(fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  priority           String        @default("Medium") // Low, Medium, High, Critical
+  status             String        @default("To Do")  // To Do, In Progress, In Review, Completed, Blocked
+  category           String        @default("General")
   dueDate            DateTime?
-  order              Int       @default(0)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  order              Int           @default(0)
+  blockerReason      String?
+  blockedAt          DateTime?
+  completionNotes    String?
+  submittedAt        DateTime?
+  managerFeedback    String?
+  requestedDueDate   DateTime?
+  extensionReason    String?
+  extensionStatus    String?       // "PENDING", "APPROVED", "REJECTED"
+  estimatedBudget    Float?
+  successMetric      String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  comments           TaskComment[]
 
   @@index([businessId])
   @@index([assignedEmployeeId])
+  @@index([status])
+}
+
+model TaskComment {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String
+  userName   String
+  userRole   String   // "OWNER" | "EMPLOYEE"
+  content        String
+  type           String   @default("COMMENT") // "COMMENT", "STATUS_CHANGE", "WORK_STARTED", "SUBMISSION", "REVISION_REQUESTED", "APPROVAL", "BLOCKER", "EXTENSION_REQUEST"
+  previousStatus String?
+  newStatus      String?
+  createdAt      DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model EmployeeRequest {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  taskId      String?
+  type        String    // "BLOCKER", "DEADLINE_EXTENSION", "RESOURCE_NEED", "GENERAL"
+  title       String
+  details     String
+  status      String    @default("PENDING") // "PENDING", "RESOLVED", "APPROVED", "REJECTED"
+  resolution  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([businessId])
+  @@index([employeeId])
 }
 
 model Transaction {
@@ -212,19 +364,53 @@ model Investment {
 }
 
 model AIRecommendation {
-  id                String   @id @default(cuid())
-  businessId        String
-  business          Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  type              String   // "Expense Alert", "Growth Opportunity", "Task Risk", "Financial Insight", etc.
-  priority          String   @default("Medium") // Low, Medium, High, Urgent
-  title             String
-  explanation       String
-  recommendedAction String
-  dismissed         Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  businessId          String
+  business            Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type                String   // "Expense Alert", "Growth Opportunity", "Task Risk", "Financial Insight", "Loss Prevention", etc.
+  priority            String   @default("Medium") // Low, Medium, High, Urgent
+  title               String
+  explanation         String
+  recommendedAction   String
+  status              String   @default("PENDING") // "PENDING", "ACCEPTED", "REJECTED", "POSTPONED", "IMPLEMENTED"
+  actionTaken         String?
+  outcomeNotes        String?
+  estimatedSavings    String?
+  successMetric       String?
+  implementationSteps String?  // JSON string
+  dismissed           Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([businessId])
+}
+
+model FeasibilityAssessment {
+  id                     String   @id @default(cuid())
+  businessId             String   @unique
+  business               Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  overallStatus          String   // "VIABLE", "MODERATE_RISK", "HIGH_RISK", "NEEDS_VALIDATION", "CAPITAL_CONSTRAINED"
+  summary                String
+  customerDemandAnalysis String
+  targetCustomerFit      String
+  marketAndCompetition   String
+  capitalViability       String
+  minStartupCost         Float
+  maxStartupCost         Float
+  expectedMonthlyOpex    Float
+  breakEvenMonths        Int
+  operationalComplexity  String
+  founderReadiness       String
+  legalRegulatoryRisks   String
+  strengths              String   // JSON array
+  weaknesses             String   // JSON array
+  criticalRisks          String   // JSON array
+  majorAssumptions       String   // JSON array
+  unansweredQuestions    String   // JSON array
+  validationExperiments  String   // JSON array
+  nextStepRecommendation String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
 
 model Notification {
@@ -254,3 +440,137 @@ model Report {
 
   @@index([businessId])
 }
+
+model Attendance {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date               String    // Format "YYYY-MM-DD"
+  checkIn            DateTime  @default(now())
+  checkOut           DateTime?
+  totalHours         Float?
+  status             String    @default("PRESENT") // "PRESENT", "ON_TIME", "LATE", "ON_BREAK", "CHECKED_IN", "CHECKED_OUT", "EARLY_DEPARTURE", "HALF_DAY", "INCOMPLETE"
+  method             String    @default("QR_SCAN") // "QR_SCAN", "REMOTE_APPROVED", "REMOTE_SELF", "FIELD_WORK", "MANUAL_CORRECTION"
+  workType           String    @default("OFFICE")  // "OFFICE", "REMOTE", "FIELD"
+  scheduleSnapshot   String?   // JSON snapshot of effective schedule at punch time
+  breakMinutes       Float?    @default(0)
+  isOnBreak          Boolean   @default(false)
+  currentBreakStart  DateTime?
+  earlyDeparture     Boolean   @default(false)
+  approvalRequestId  String?
+  correctionReason   String?
+  correctionStatus   String?   // "PENDING", "APPROVED", "REJECTED"
+  correctedBy        String?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  breaks             AttendanceBreak[]
+  audits             AttendanceAudit[]
+
+  @@index([businessId])
+  @@index([employeeId])
+  @@index([date])
+}
+
+model OfficeQrCode {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  code       String    @unique
+  date       String    // "YYYY-MM-DD"
+  expiresAt  DateTime
+  createdBy  String
+  createdAt  DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([code])
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content     String
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model WorkSchedule {
+  id                  String    @id @default(cuid())
+  businessId          String
+  business            Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employeeId          String?   @unique
+  employee            Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  department          String?
+  level               String    @default("INDIVIDUAL") // "COMPANY_DEFAULT", "TEAM_SHIFT", "INDIVIDUAL"
+  name                String    @default("Standard Core Schedule")
+  workArrangement     String    @default("Office")     // "Office", "Remote", "Hybrid"
+  checkInStartTime    String    @default("09:00")
+  checkInEndTime      String    @default("10:00")
+  checkOutTime        String    @default("18:30")
+  workingDays         String    @default("[\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"]")
+  expectedHours       Float     @default(8.0)
+  breakPolicy         String?   @default("60 min flexible break")
+  breakMinutesAllowed Int       @default(60)
+  trackBreaks         Boolean   @default(true)
+  gracePeriodMinutes  Int       @default(30)
+  allowEarlyDeparture Boolean   @default(false)
+  timezone            String    @default("Asia/Kolkata")
+  effectiveDate       String?   @default("2026-01-01")
+  status              String    @default("Active")     // "Active", "Inactive"
+  isOvernight         Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([businessId])
+  @@index([employeeId])
+  @@index([department])
+}
+
+model AttendanceBreak {
+  id              String     @id @default(cuid())
+  attendanceId    String
+  attendance      Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  startTime       DateTime   @default(now())
+  endTime         DateTime?
+  durationMinutes Float?
+  type            String     @default("LUNCH") // "LUNCH", "COFFEE_BREAK", "PERSONAL"
+  reason          String?
+  createdAt       DateTime   @default(now())
+
+  @@index([attendanceId])
+}
+
+model AttendanceAudit {
+  id            String      @id @default(cuid())
+  businessId    String
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  attendanceId  String?
+  attendance    Attendance? @relation(fields: [attendanceId], references: [id], onDelete: SetNull)
+  employeeId    String
+  employee      Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  actorId       String
+  actorName     String
+  actorRole     String      // "OWNER", "EMPLOYEE", "SYSTEM"
+  action        String      // "SCHEDULE_UPDATE", "CHECK_IN", "CHECK_OUT", "BREAK_START", "BREAK_END", "CORRECTION_REQUEST", "CORRECTION_APPROVED", "OVERRIDE"
+  previousState String?
+  newState      String?
+  reason        String?
+  metadata      String?
+  createdAt     DateTime    @default(now())
+
+  @@index([businessId])
+  @@index([attendanceId])
+  @@index([employeeId])
+}
+

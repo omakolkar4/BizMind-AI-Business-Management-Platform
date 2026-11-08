@@ -12,6 +12,14 @@ import {
   FileSpreadsheet,
   Download,
   Filter,
+  AlertTriangle,
+  Sparkles,
+  ShieldCheck,
+  ListPlus,
+  CheckCircle2,
+  SlidersHorizontal,
+  ArrowRight,
+  TrendingDown as TrendingDownIcon,
 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -49,7 +57,10 @@ interface InvestmentItem {
 export default function FinancesPage() {
   const [transactions, setTransactions] = React.useState<TransactionItem[]>([]);
   const [investments, setInvestments] = React.useState<InvestmentItem[]>([]);
+  const [diagnosis, setDiagnosis] = React.useState<any>(null);
+  const [businessName, setBusinessName] = React.useState("My Business");
   const [loading, setLoading] = React.useState(true);
+  const [creatingTask, setCreatingTask] = React.useState(false);
   const [dateFilter, setDateFilter] = React.useState("This Year");
 
   // Modal: Add Transaction (Income or Expense)
@@ -71,9 +82,11 @@ export default function FinancesPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [txRes, invRes] = await Promise.all([
+      const [txRes, invRes, diagRes, meRes] = await Promise.all([
         fetch("/api/transactions"),
         fetch("/api/investments"),
+        fetch("/api/finances/diagnosis"),
+        fetch("/api/auth/me"),
       ]);
 
       if (txRes.ok) {
@@ -83,6 +96,16 @@ export default function FinancesPage() {
       if (invRes.ok) {
         const json = await invRes.json();
         setInvestments(json.investments || []);
+      }
+      if (diagRes.ok) {
+        const json = await diagRes.json();
+        setDiagnosis(json);
+      }
+      if (meRes.ok) {
+        const json = await meRes.json();
+        if (json?.user?.businessName) {
+          setBusinessName(json.user.businessName);
+        }
       }
     } catch {
       toast.error("Network error loading financial ledger.");
@@ -199,13 +222,13 @@ export default function FinancesPage() {
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
   const totalInvestment = investments.reduce((acc, i) => acc + i.amount, 0);
 
-  // Dynamic Chart points
+  // Dynamic Chart points - strictly deterministic from actual ledger records
   const months = ["May", "Jun", "Jul", "Aug", "Sep", "Oct"];
   const dynamicChartData = months.map((m) => ({
     month: m,
-    revenue: monthlyAgg[m]?.revenue || (m === "Sep" ? totalRevenue : Math.round(totalRevenue * 0.7)),
-    expenses: monthlyAgg[m]?.expenses || (m === "Sep" ? totalExpenses : Math.round(totalExpenses * 0.75)),
-    profit: (monthlyAgg[m]?.revenue || totalRevenue) - (monthlyAgg[m]?.expenses || totalExpenses),
+    revenue: monthlyAgg[m]?.revenue || 0,
+    expenses: monthlyAgg[m]?.expenses || 0,
+    profit: (monthlyAgg[m]?.revenue || 0) - (monthlyAgg[m]?.expenses || 0),
   }));
 
   const pieColors = ["#4F46E5", "#06B6D4", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6"];
@@ -218,36 +241,59 @@ export default function FinancesPage() {
   const incomeTransactions = transactions.filter((t) => t.type === "INCOME");
   const expenseTransactions = transactions.filter((t) => t.type === "EXPENSE");
 
+  const handleCreateCorrectiveTask = async (action: any) => {
+    try {
+      setCreatingTask(true);
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `[Financial Corrective Action] ${action.proposedAction.slice(0, 50)}...`,
+          description: `${action.problem}\n\nEvidence: ${action.evidence}\n\nImplementation Steps:\n${(action.implementationSteps || []).map((s: string, idx: number) => `${idx + 1}. ${s}`).join("\n")}`,
+          category: "Finance",
+          priority: "High",
+          successMetric: action.successMetric,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Corrective action created as an operational task in Task Manager!");
+      } else {
+        toast.error("Failed to create task.");
+      }
+    } catch {
+      toast.error("Error creating corrective action task.");
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
   const handleExportPL = () => {
     const pAndLSections = [
       {
         title: "I. Revenue Summary",
-        content: `Gross revenue collected: ${formatCurrency(totalRevenue)}. Recurring corporate meal retainers and retail subscription deliveries accounted for over 72% of total top-line income.`,
+        content: `Gross revenue collected: ${formatCurrency(totalRevenue)}. Operating revenue verified from live transactional ledger entries.`,
       },
       {
-        title: "II. Cost of Goods & Direct Supplies",
-        content: `Direct ingredient sourcing and farm supply procurement amounted to ${formatCurrency(expenseCatMap["Raw Materials"] || Math.round(totalExpenses * 0.35))}. Gross contribution margin remains healthy at 58.4%.`,
+        title: "II. Operating Expenditures (OpEx)",
+        content: `Total operating overhead: ${formatCurrency(totalExpenses)}. Includes categorical allocations across recorded operational, vendor, software, and staffing line items.`,
       },
       {
-        title: "III. Operating Expenditures (OpEx)",
-        content: `Total operating overhead: ${formatCurrency(totalExpenses)}. Core cost centers include kitchen commercial lease, certified chef payroll, packaging materials, and hyper-local fleet logistics.`,
-      },
-      {
-        title: "IV. Net Profit & Operating Margin",
-        content: `Net Operating Profit achieved: ${formatCurrency(netProfit)} (${profitMargin.toFixed(1)}% margin). Cash reserves are stable with zero short-term debt and positive working capital cycle.`,
+        title: "III. Net Profit & Operating Margin",
+        content: `Net Operating Profit achieved: ${formatCurrency(netProfit)} (${profitMargin.toFixed(1)}% margin). Verified from ledger without speculative estimates.`,
       },
     ];
 
     exportDocumentToPdf({
       title: "Profit & Loss Statement (P&L Audit)",
-      businessName: "NovaBite Foods",
+      businessName: businessName || "Company",
       sections: pAndLSections,
       metadata: {
         "Total Revenue": formatCurrency(totalRevenue),
         "Total Operating Expenses": formatCurrency(totalExpenses),
         "Net Operating Profit": formatCurrency(netProfit),
         "Net Profit Margin": `${profitMargin.toFixed(1)}%`,
-        "Total Seed Investment": formatCurrency(totalInvestment),
+        "Total Capital Infused": formatCurrency(totalInvestment),
       },
     });
 
@@ -410,6 +456,10 @@ export default function FinancesPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <TabsList className="bg-muted/80">
               <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+              <TabsTrigger value="diagnosis" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3 text-amber-500" />
+                <span>Loss Prevention & Simulator</span>
+              </TabsTrigger>
               <TabsTrigger value="income" className="text-xs">Income ({incomeTransactions.length})</TabsTrigger>
               <TabsTrigger value="expenses" className="text-xs">Expenses ({expenseTransactions.length})</TabsTrigger>
               <TabsTrigger value="investments" className="text-xs">Investments ({investments.length})</TabsTrigger>
@@ -684,6 +734,242 @@ export default function FinancesPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* TAB 6: AI FINANCIAL LOSS PREVENTION & SCENARIO SIMULATOR (Section 6) */}
+          <TabsContent value="diagnosis">
+            <div className="space-y-6">
+              {/* Financial Status & Runway Banner */}
+              {diagnosis && (
+                <Card className={`border shadow-sm ${
+                  diagnosis.metrics?.isLosing
+                    ? "border-rose-500/40 bg-rose-50/10 dark:bg-rose-950/10"
+                    : "border-emerald-500/40 bg-emerald-50/10 dark:bg-emerald-950/10"
+                }`}>
+                  <CardHeader className="pb-3 border-b flex flex-row items-center justify-between space-y-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`p-1.5 rounded-lg text-white ${
+                        diagnosis.metrics?.isLosing ? "bg-rose-600" : "bg-emerald-600"
+                      }`}>
+                        {diagnosis.metrics?.isLosing ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">
+                          {diagnosis.metrics?.isLosing
+                            ? "Operating Loss Detected — Loss Recovery Plan Active"
+                            : "Healthy Operational Runway — Growth Strategy"}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          {diagnosis.metrics?.isLosing
+                            ? "Expenses currently outpace verified revenue. Follow prioritized corrective steps to extend runway."
+                            : "Verified ledger confirms positive operating margins. Maintain cost discipline while scaling."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Badge className={diagnosis.metrics?.isLosing ? "bg-rose-600 text-white text-xs" : "bg-emerald-600 text-white text-xs"}>
+                      {diagnosis.metrics?.isLosing ? "Loss Recovery Required" : "Profitable Operation"}
+                    </Badge>
+                  </CardHeader>
+
+                  <CardContent className="p-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="p-3 rounded-lg border bg-background space-y-1">
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Estimated Runway</span>
+                        <p className="text-sm font-extrabold text-foreground font-mono">
+                          {diagnosis.metrics?.cashRunwayMonths || 12} Months
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg border bg-background space-y-1">
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Monthly Net Burn</span>
+                        <p className="text-sm font-extrabold text-rose-600 font-mono">
+                          {formatCurrency(diagnosis.metrics?.netMonthlyBurn || 0)}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg border bg-background space-y-1">
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Net Result</span>
+                        <p className={`text-sm font-extrabold font-mono ${diagnosis.metrics?.netProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                          {formatCurrency(diagnosis.metrics?.netProfit || 0)}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg border bg-background space-y-1">
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Operating Margin</span>
+                        <p className="text-sm font-extrabold text-foreground font-mono">
+                          {(diagnosis.metrics?.profitMargin || 0).toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Prioritized Corrective-Action Plan (Section 6) */}
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3 border-b bg-muted/20">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-indigo-600" />
+                    <span>Prioritized Financial Corrective-Action Plan</span>
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Actionable, evidence-backed recommendations to reduce burn, expand margins, and restore break-even trajectory
+                  </p>
+                </CardHeader>
+
+                <CardContent className="p-5 space-y-4">
+                  {(diagnosis?.correctiveActionPlan || []).map((action: any, idx: number) => (
+                    <div
+                      key={action.id || idx}
+                      className="p-4 rounded-xl border bg-background shadow-2xs space-y-3 text-xs"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white font-bold text-[10px]">
+                            {idx + 1}
+                          </span>
+                          <span className="font-bold text-foreground text-sm">{action.proposedAction}</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleCreateCorrectiveTask(action)}
+                          disabled={creatingTask}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-7 font-semibold shrink-0"
+                        >
+                          <ListPlus className="h-3 w-3 mr-1" />
+                          <span>Turn into Task</span>
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">Problem Addressed:</span>
+                          <p className="text-foreground">{action.problem}</p>
+                          <p className="text-muted-foreground text-[11px] pt-1"><strong>Evidence:</strong> {action.evidence}</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase">Estimated Impact / Savings:</span>
+                          <p className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{action.estimatedSavings}</p>
+                          <p className="text-muted-foreground text-[11px] pt-1"><strong>Success Metric:</strong> {action.successMetric}</p>
+                        </div>
+                      </div>
+
+                      {/* Implementation Steps */}
+                      {action.implementationSteps && action.implementationSteps.length > 0 && (
+                        <div className="p-2.5 rounded-lg bg-muted/30 border space-y-1">
+                          <span className="text-[10px] font-bold text-foreground uppercase block">Implementation Steps:</span>
+                          <ul className="space-y-1 text-muted-foreground">
+                            {action.implementationSteps.map((step: string, sIdx: number) => (
+                              <li key={sIdx} className="flex items-start gap-1.5">
+                                <span className="text-indigo-500 font-bold">•</span>
+                                <span>{step}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Scenario Comparison Simulator (Section 6) */}
+              {diagnosis?.scenarioComparison && (
+                <Card className="border shadow-sm border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50/20 via-card to-card">
+                  <CardHeader className="pb-3 border-b flex flex-row items-center justify-between space-y-0">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-indigo-600 text-white">
+                        <SlidersHorizontal className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">Financial Scenario Comparison Simulator</CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          Model the mathematical outcome of expense containment vs pricing optimizations
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">
+                      Estimates / Simulation Only
+                    </Badge>
+                  </CardHeader>
+
+                  <CardContent className="p-5 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
+                      {/* Scenario A */}
+                      <div className="p-3.5 rounded-xl border bg-background space-y-2">
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 block">
+                          {diagnosis.scenarioComparison.scenarioReduceExpenses.label}
+                        </span>
+                        <div className="space-y-1 font-mono text-[11px]">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Simulated OpEx:</span>
+                            <span>{formatCurrency(diagnosis.scenarioComparison.scenarioReduceExpenses.expenses)}</span>
+                          </div>
+                          <div className="flex justify-between font-bold text-emerald-600">
+                            <span>Projected Net Profit:</span>
+                            <span>{formatCurrency(diagnosis.scenarioComparison.scenarioReduceExpenses.netProfit)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Projected Margin:</span>
+                            <span>{diagnosis.scenarioComparison.scenarioReduceExpenses.profitMargin}</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic pt-1 border-t">
+                          {diagnosis.scenarioComparison.scenarioReduceExpenses.note}
+                        </p>
+                      </div>
+
+                      {/* Scenario B */}
+                      <div className="p-3.5 rounded-xl border bg-background space-y-2">
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 block">
+                          {diagnosis.scenarioComparison.scenarioPriceIncrease.label}
+                        </span>
+                        <div className="space-y-1 font-mono text-[11px]">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Simulated Revenue:</span>
+                            <span>{formatCurrency(diagnosis.scenarioComparison.scenarioPriceIncrease.revenue)}</span>
+                          </div>
+                          <div className="flex justify-between font-bold text-emerald-600">
+                            <span>Projected Net Profit:</span>
+                            <span>{formatCurrency(diagnosis.scenarioComparison.scenarioPriceIncrease.netProfit)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Projected Margin:</span>
+                            <span>{diagnosis.scenarioComparison.scenarioPriceIncrease.profitMargin}</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic pt-1 border-t">
+                          {diagnosis.scenarioComparison.scenarioPriceIncrease.note}
+                        </p>
+                      </div>
+
+                      {/* Scenario C */}
+                      <div className="p-3.5 rounded-xl border bg-background border-emerald-500/30 space-y-2">
+                        <span className="font-bold text-emerald-600 block">
+                          {diagnosis.scenarioComparison.scenarioCombined.label}
+                        </span>
+                        <div className="space-y-1 font-mono text-[11px]">
+                          <div className="flex justify-between font-bold text-emerald-600">
+                            <span>Projected Net Profit:</span>
+                            <span>{formatCurrency(diagnosis.scenarioComparison.scenarioCombined.netProfit)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Projected Margin:</span>
+                            <span className="font-bold">{diagnosis.scenarioComparison.scenarioCombined.profitMargin}</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic pt-1 border-t">
+                          {diagnosis.scenarioComparison.scenarioCombined.note}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground italic">
+                      * All scenario simulator projections are mathematical estimates based on verified ledger parameters. BizMind never alters budgets, prices, or employment statuses autonomously without user approval.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
 
         {/* Modal: Add Transaction */}
@@ -723,7 +1009,7 @@ export default function FinancesPage() {
                 <Input
                   id="tx-amount"
                   type="number"
-                  placeholder="50000"
+                  placeholder="Enter amount (in ₹)"
                   value={txAmount}
                   onChange={(e) => setTxAmount(e.target.value)}
                   className="text-xs font-mono"
@@ -735,7 +1021,7 @@ export default function FinancesPage() {
                 <Label htmlFor="tx-desc">Description</Label>
                 <Input
                   id="tx-desc"
-                  placeholder="e.g. Corporate catering retainer - Infotech Phase 2"
+                  placeholder="Enter transaction description"
                   value={txDescription}
                   onChange={(e) => setTxDescription(e.target.value)}
                   className="text-xs"
@@ -747,7 +1033,7 @@ export default function FinancesPage() {
                 <Label htmlFor="tx-cat">Category</Label>
                 <Input
                   id="tx-cat"
-                  placeholder="e.g. Corporate Subscriptions, Raw Materials, Salaries, Marketing..."
+                  placeholder="Enter category (e.g. Operations, Marketing, Inventory)"
                   value={txCategory}
                   onChange={(e) => setTxCategory(e.target.value)}
                   className="text-xs"
@@ -790,7 +1076,7 @@ export default function FinancesPage() {
                 <Label htmlFor="inv-name">Investor / Firm Name</Label>
                 <Input
                   id="inv-name"
-                  placeholder="e.g. Western Maharashtra Angel Network"
+                  placeholder="Enter investor name or institution"
                   value={invInvestor}
                   onChange={(e) => setInvInvestor(e.target.value)}
                   className="text-xs"
@@ -803,7 +1089,7 @@ export default function FinancesPage() {
                 <Input
                   id="inv-amount"
                   type="number"
-                  placeholder="500000"
+                  placeholder="Enter investment amount (in ₹)"
                   value={invAmount}
                   onChange={(e) => setInvAmount(e.target.value)}
                   className="text-xs font-mono"
@@ -834,7 +1120,7 @@ export default function FinancesPage() {
                     id="inv-eq"
                     type="number"
                     step="0.1"
-                    placeholder="5.0"
+                    placeholder="Enter equity % (optional)"
                     value={invEquity}
                     onChange={(e) => setInvEquity(e.target.value)}
                     className="text-xs font-mono"
@@ -846,7 +1132,7 @@ export default function FinancesPage() {
                 <Label htmlFor="inv-notes">Notes / Covenants</Label>
                 <Input
                   id="inv-notes"
-                  placeholder="e.g. Tranche 1 release upon FSSAI certification renewal"
+                  placeholder="Enter investment terms or conditions"
                   value={invNotes}
                   onChange={(e) => setInvNotes(e.target.value)}
                   className="text-xs"
